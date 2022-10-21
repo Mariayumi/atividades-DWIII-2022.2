@@ -11,82 +11,91 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.autobots.automanager.entidades.Cliente;
-import com.autobots.automanager.modelos.AdicionadorLinkCliente;
+import com.autobots.automanager.entidades.Telefone;
 import com.autobots.automanager.modelos.TelefoneAtualizador;
-import com.autobots.automanager.modelos.ClienteSelecionador;
+import com.autobots.automanager.modelos.TelefoneSelecionador;
 import com.autobots.automanager.repositorios.ClienteRepositorio;
+import com.autobots.automanager.repositorios.TelefoneRepositorio;
 
+@RestController
 public class TelefoneControle {
+		
 	@Autowired
 	private TelefoneRepositorio repositorio;
 	@Autowired
-	private TelefoneSelecionador selecionador;
+	private ClienteRepositorio repositorioCliente;
 	@Autowired
-	private AdicionadorLinkCliente adicionadorLink;
-
-	@GetMapping("/cliente/{id}")
-	public ResponseEntity<Cliente> obterCliente(@PathVariable long id) {
-		List<Cliente> clientes = repositorio.findAll();
-		Cliente cliente = selecionador.selecionar(clientes, id);
-		if (cliente == null) {
-			ResponseEntity<Cliente> resposta = new ResponseEntity<>(HttpStatus.NOT_FOUND);
+	private TelefoneSelecionador selecionador;
+	
+	@GetMapping("/telefones/{telId}")
+	public ResponseEntity<Telefone> obterTelefone(@PathVariable Long telId){
+		List<Telefone> telefones = repositorio.findAll();
+		Telefone telefone = selecionador.selecionar(telefones, telId);
+		if(telefone == null) {
+			ResponseEntity<Telefone> resposta = new ResponseEntity<>(HttpStatus.NOT_FOUND);
+			return resposta;
+		}else {
+			ResponseEntity<Telefone> resposta = new ResponseEntity<Telefone>(telefone, HttpStatus.FOUND);
+			return resposta;
+		}
+	}
+	
+	@GetMapping("/telefones")
+	public ResponseEntity<List<Telefone>> obterTelefones(){
+		List<Telefone> telefones = repositorio.findAll();
+		if (telefones.isEmpty()) {
+			ResponseEntity<List<Telefone>> resposta = new ResponseEntity<>(HttpStatus.NOT_FOUND);
 			return resposta;
 		} else {
-			adicionadorLink.adicionarLink(cliente);
-			ResponseEntity<Cliente> resposta = new ResponseEntity<Cliente>(cliente, HttpStatus.FOUND);
+			ResponseEntity<List<Telefone>> resposta = new ResponseEntity<>(telefones, HttpStatus.FOUND);
 			return resposta;
 		}
 	}
-
-	@GetMapping("/clientes")
-	public ResponseEntity<List<Cliente>> obterClientes() {
-		List<Cliente> clientes = repositorio.findAll();
-		if (clientes.isEmpty()) {
-			ResponseEntity<List<Cliente>> resposta = new ResponseEntity<>(HttpStatus.NOT_FOUND);
-			return resposta;
-		} else {
-			adicionadorLink.adicionarLink(clientes);
-			ResponseEntity<List<Cliente>> resposta = new ResponseEntity<>(clientes, HttpStatus.FOUND);
-			return resposta;
-		}
+	
+	 @PostMapping("/telefones/cadastro/{clienteId}") 
+	 public ResponseEntity<?> cadastroTelefone(@PathVariable Long clienteId, @RequestBody Cliente atualizacao){ 
+		 HttpStatus status = HttpStatus.CONFLICT;
+		 Cliente cliente = repositorioCliente.getById(clienteId); 
+		 if(cliente != null){ 
+			 cliente.setTelefones(atualizacao.getTelefones());
+			 repositorioCliente.save(cliente); 
+			 status = HttpStatus.CREATED; 
+			 } else { 
+				 status = HttpStatus.BAD_REQUEST; 
+				 } return new ResponseEntity<>(status); 
 	}
-
-	@PostMapping("/cliente/cadastro")
-	public ResponseEntity<?> cadastrarCliente(@RequestBody Cliente cliente) {
+	 
+	
+	@PutMapping("/telefones/atualizacao/{telId}")
+	public ResponseEntity<?> atualizacaoTelefone(@PathVariable Long telId, @RequestBody Telefone atualizacao){
 		HttpStatus status = HttpStatus.CONFLICT;
-		if (cliente.getId() == null) {
-			repositorio.save(cliente);
-			status = HttpStatus.CREATED;
-		}
-		return new ResponseEntity<>(status);
-
-	}
-
-	@PutMapping("/cliente/atualizar")
-	public ResponseEntity<?> atualizarCliente(@RequestBody Cliente atualizacao) {
-		HttpStatus status = HttpStatus.CONFLICT;
-		Cliente cliente = repositorio.getById(atualizacao.getId());
-		if (cliente != null) {
-			ClienteAtualizador atualizador = new ClienteAtualizador();
-			atualizador.atualizar(cliente, atualizacao);
-			repositorio.save(cliente);
+		Telefone telefone = repositorio.getById(telId);
+		if(telefone != null) {
+			TelefoneAtualizador atualizador = new TelefoneAtualizador();
+			atualizador.atualizar(telefone, atualizacao);
+			repositorio.save(telefone);
 			status = HttpStatus.OK;
 		} else {
+			status = HttpStatus.BAD_REQUEST;
+		} return new ResponseEntity<>(status);
+	}
+	
+	@DeleteMapping("/telefones/deletar/{clienteId}/{tellId}")
+	public ResponseEntity<?> excluirTelefone(@PathVariable Long tellId, @PathVariable Long clienteId){
+		HttpStatus status = HttpStatus.BAD_REQUEST;
+		Telefone telefone = repositorio.getById(tellId);
+		Cliente cliente = repositorioCliente.getById(clienteId);
+		if (telefone != null) {
+			cliente.getTelefones().remove(telefone);
+			repositorio.delete(telefone);
+			status = HttpStatus.OK;
+		}else {
 			status = HttpStatus.BAD_REQUEST;
 		}
 		return new ResponseEntity<>(status);
 	}
-
-	@DeleteMapping("/cliente/excluir")
-	public ResponseEntity<?> excluirCliente(@RequestBody Cliente exclusao) {
-		HttpStatus status = HttpStatus.BAD_REQUEST;
-		Cliente cliente = repositorio.getById(exclusao.getId());
-		if (cliente != null) {
-			repositorio.delete(cliente);
-			status = HttpStatus.OK;
-		}
-		return new ResponseEntity<>(status);
-	}
+	
 }

@@ -28,5 +28,9 @@ public class Endereco {
 	private String codigoPostal;
 	@Column(unique = false, nullable = true)
 	private String informacoesAdicionais;
+	public void remove(Endereco endereco) {
+		// TODO Auto-generated method stub
+		
+	}
 
 }
