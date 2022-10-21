@@ -55,21 +55,21 @@ public class EnderecoControle {
 		}
 	}
 	
-	@PutMapping("enderecos/cadastro/{clienteId}")
+	@PutMapping("endereco/cadastro/{clienteId}")
 	public ResponseEntity<?> cadastroEndereco(@PathVariable Long clienteId, @RequestBody Endereco atualizacao){
 		HttpStatus status = HttpStatus.CONFLICT;
 		Cliente cliente = repositorioCliente.getById(clienteId);
 		if (cliente != null) {
 			cliente.setEndereco(atualizacao);
 			repositorio.save(atualizacao);
-			status = HttpStatus.OK;
+			status = HttpStatus.CREATED;
 		}else {
 			status = HttpStatus.BAD_REQUEST;
 		}
 		return new ResponseEntity<>(status);
 	}
 	
-	@PutMapping("/enderecos/atualizacao/{endeId}")
+	@PutMapping("/endereco/atualizacao/{endeId}")
 	public ResponseEntity<?> atualizarEndereco(@PathVariable Long endeId, @RequestBody Endereco atualizacao){
 		HttpStatus status = HttpStatus.CONFLICT;
 		Endereco endereco = repositorio.getById(endeId);
@@ -81,20 +81,5 @@ public class EnderecoControle {
 		}else {
 			status = HttpStatus.BAD_REQUEST;
 		} return new ResponseEntity<>(status);
-	}
-
-	@DeleteMapping("/enderecos/deletar/{clienteId}/{endeId}")
-	public ResponseEntity<?> excluirEndereco(@PathVariable Long endeId, @PathVariable Long clienteId){
-		HttpStatus status = HttpStatus.BAD_REQUEST;
-		Endereco endereco = repositorio.getById(endeId);
-		Cliente cliente = repositorioCliente.getById(clienteId);
-		if (endereco != null) {
-			cliente.getEndereco().remove(endereco);
-			repositorio.delete(endereco);
-			status = HttpStatus.OK;
-		}else {
-			status = HttpStatus.BAD_REQUEST;
-		}
-		return new ResponseEntity<>(status);
 	}
 }

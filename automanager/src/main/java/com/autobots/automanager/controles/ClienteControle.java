@@ -14,7 +14,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.autobots.automanager.entidades.Cliente;
+import com.autobots.automanager.entidades.Documento;
+import com.autobots.automanager.entidades.Endereco;
+import com.autobots.automanager.entidades.Telefone;
 import com.autobots.automanager.modelos.AdicionadorLinkCliente;
+
 import com.autobots.automanager.modelos.ClienteAtualizador;
 import com.autobots.automanager.modelos.ClienteSelecionador;
 import com.autobots.automanager.repositorios.ClienteRepositorio;
@@ -27,9 +31,9 @@ public class ClienteControle {
 	private ClienteSelecionador selecionador;
 	@Autowired
 	private AdicionadorLinkCliente adicionadorLink;
-
+	
 	@GetMapping("/cliente/{id}")
-	public ResponseEntity<Cliente> obterCliente(@PathVariable long id) {
+	public ResponseEntity<Cliente> obterCliente(@PathVariable Long id) {
 		List<Cliente> clientes = repositorio.findAll();
 		Cliente cliente = selecionador.selecionar(clientes, id);
 		if (cliente == null) {
@@ -90,5 +94,43 @@ public class ClienteControle {
 			status = HttpStatus.OK;
 		}
 		return new ResponseEntity<>(status);
+	}
+	
+	@GetMapping("/cliente/{id}/telefones")
+	public ResponseEntity<List<Telefone>> obterTelefone(@PathVariable Long id) {
+		List<Cliente> clientes = repositorio.findAll();
+		List<Telefone> telefone = selecionador.selecionarTelefone(clientes, id);
+		if (telefone.isEmpty()) {
+			ResponseEntity<List<Telefone>> resposta = new ResponseEntity<>(HttpStatus.LOCKED);
+			return resposta;
+		} else {
+			ResponseEntity<List<Telefone>> resposta = new ResponseEntity<>(telefone, HttpStatus.FOUND);
+			return resposta;
+		}
+	}
+	
+	@GetMapping("/cliente/{id}/documentos")
+	public ResponseEntity<List<Documento>> obterDocumentos(@PathVariable Long id) {
+		List<Cliente> clientes = repositorio.findAll();
+		List<Documento> documento = selecionador.selecionarDocumento(clientes, id);
+		if (documento.isEmpty()) {
+			ResponseEntity<List<Documento>> resposta = new ResponseEntity<>(HttpStatus.LOCKED);
+			return resposta;
+		} else {
+			ResponseEntity<List<Documento>> resposta = new ResponseEntity<>(documento, HttpStatus.FOUND);
+			return resposta;
+		}
+	}
+	@GetMapping("/cliente/{id}/endereco")
+	public ResponseEntity<Endereco> obterEndereco(@PathVariable Long id) {
+		List<Cliente> clientes = repositorio.findAll();
+		Endereco end = selecionador.selecionarEndereco(clientes, id);
+		if (end == null) {
+			ResponseEntity<Endereco> resposta = new ResponseEntity<>(HttpStatus.LOCKED);
+			return resposta;
+		} else {
+			ResponseEntity<Endereco> resposta = new ResponseEntity<>(end, HttpStatus.FOUND);
+			return resposta;
+		}
 	}
 }
