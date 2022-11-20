@@ -2,13 +2,6 @@ package com.autobots.automanager.controles;
 
 import java.util.List;
 
-import com.autobots.automanager.entidades.Cliente;
-import com.autobots.automanager.entidades.Documento;
-import com.autobots.automanager.modelos.DocumentoAtualizador;
-import com.autobots.automanager.modelos.DocumentoSelecionador;
-import com.autobots.automanager.repositorios.ClienteRepositorio;
-import com.autobots.automanager.repositorios.DocumentosRepositorio;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,86 +10,122 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+import com.autobots.automanager.entidades.Cliente;
+import com.autobots.automanager.entidades.Documento;
+import com.autobots.automanager.modelos.AdicionadorLinkDocumento;
+import com.autobots.automanager.modelos.ClienteSelecionador;
+import com.autobots.automanager.modelos.DocumentoAtualizador;
+import com.autobots.automanager.modelos.DocumentoSelecionador;
+import com.autobots.automanager.repositorios.ClienteRepositorio;
+import com.autobots.automanager.repositorios.DocumentosRepositorio;
+
+@RestController
+@RequestMapping("/documento")
 public class DocumentoControle {
+
 	@Autowired
-	private ClienteRepositorio repositorioCliente;
+	private DocumentosRepositorio repositorioDocumento;
+
 	@Autowired
-	private DocumentoSelecionador selecionador;
+	private DocumentoSelecionador selecionadorDocumento;
+
 	@Autowired
-	private DocumentosRepositorio repositorio;
-	
-	@GetMapping("/documentos/{docId}")
-	public ResponseEntity<Documento> obterDocumento(@PathVariable Long docId){
-		List<Documento> documentos = repositorio.findAll();
-		Documento documento = selecionador.selecionar(documentos, docId);
-		if(documento == null) {
+	private ClienteRepositorio repositorio;
+
+	@Autowired
+	private ClienteSelecionador selecionador;
+
+	@Autowired
+	private AdicionadorLinkDocumento adicionadorLink;
+
+
+	@GetMapping("/documentos/{id}")
+	public ResponseEntity<Documento> documentosCliente(@PathVariable long id) {
+		List<Documento> documentos = repositorioDocumento.findAll();
+		Documento documento = selecionadorDocumento.selecionar(documentos, id);
+		if (documento == null) {
 			ResponseEntity<Documento> resposta = new ResponseEntity<>(HttpStatus.NOT_FOUND);
 			return resposta;
-		}else {
+
+		} else {
+			adicionadorLink.adicionarLink(documento);
 			ResponseEntity<Documento> resposta = new ResponseEntity<Documento>(documento, HttpStatus.FOUND);
 			return resposta;
 		}
 	}
 	
 	@GetMapping("/documentos")
-	public ResponseEntity<List<Documento>> obterDocumentos(){
-		List<Documento> docs = repositorio.findAll();
-		if(docs.isEmpty()) {
+	public ResponseEntity<List<Documento>> docs() {
+		List<Documento> documentos = repositorioDocumento.findAll();
+		if (documentos.isEmpty()) {
 			ResponseEntity<List<Documento>> resposta = new ResponseEntity<>(HttpStatus.NOT_FOUND);
 			return resposta;
-		}else {
-			ResponseEntity<List<Documento>> resposta = new ResponseEntity<>(docs, HttpStatus.FOUND);
+
+		} else {
+			adicionadorLink.adicionarLink(documentos);
+			ResponseEntity<List<Documento>> resposta = new ResponseEntity<>(documentos, HttpStatus.FOUND);
 			return resposta;
 		}
 	}
-	
-	@PutMapping("/documentos/cadastro/{clienteId}")
-	public ResponseEntity<?> cadastroTelefone(
-			@PathVariable Long clienteId, 
-			@RequestBody Cliente atualizacao){
+
+	@PutMapping("/cadastrar") 
+	public ResponseEntity<?> cadastrarDocumento(@RequestBody Cliente atualizacao) {
 		HttpStatus status = HttpStatus.CONFLICT;
-		Cliente cliente = repositorioCliente.getById(clienteId);
-		if(cliente != null) {
-			cliente.getDocumentos().addAll(atualizacao.getDocumentos());
-			repositorioCliente.save(cliente);
+		Cliente alvo = repositorio.getById(atualizacao.getId());
+		DocumentoAtualizador atualizador = new DocumentoAtualizador();
+		if (alvo != null) {
+			alvo.getDocumentos().addAll(atualizacao.getDocumentos());
+			repositorio.save(alvo);
 			status = HttpStatus.OK;
-		}
-		else {
+
+		} else {
 			status = HttpStatus.BAD_REQUEST;
 		}
 		return new ResponseEntity<>(status);
 	}
-	@PutMapping("/documentos/editar/{docId}")
-	public ResponseEntity<?> editarTelefone(
-			@PathVariable Long docId,
-			@RequestBody Documento atualizacao){
+
+	@PutMapping("/atualizar/{id}")
+	public ResponseEntity<?> atualizarDocumento(@PathVariable long id, @RequestBody Cliente atualizacao) {
 		HttpStatus status = HttpStatus.CONFLICT;
-		Documento documento = repositorio.getById(docId);
-		if(documento != null) {
-			DocumentoAtualizador atualizador = new DocumentoAtualizador();
-			atualizador.atualizar(documento, atualizacao);
-			repositorio.save(documento);
+		Cliente alvo = repositorio.getById(atualizacao.getId());
+		List<Documento> documentos = alvo.getDocumentos();
+		if (alvo != null) {
+			for (Documento documento : documentos) {
+				if (documento.getId() == id) {
+					DocumentoAtualizador atualizador = new DocumentoAtualizador();
+					Documento doc = atualizacao.getDocumentos().get(0);
+					atualizador.atualizar(documento, doc);
+				}
+			}
+
+			repositorio.save(alvo);
 			status = HttpStatus.OK;
-		}else {
+
+		} else {
 			status = HttpStatus.BAD_REQUEST;
 		}
 		return new ResponseEntity<>(status);
 	}
-	@DeleteMapping("/documentos/excluir/{clienteId}/{docId}")
-	public ResponseEntity<?> excluirTelefone(
-			@PathVariable Long docId, 
-			@PathVariable Long clienteId){
+
+	@DeleteMapping("/excluir/{id}")
+	public ResponseEntity<?> excluirDocumento(@PathVariable long id, @RequestBody Cliente exclusao) {
 		HttpStatus status = HttpStatus.BAD_REQUEST;
-		Documento documento = repositorio.getById(docId);
-		Cliente cliente = repositorioCliente.getById(clienteId);
-		if (documento != null) {
-			cliente.getDocumentos().remove(documento);
-			repositorio.delete(documento);
+		Cliente alvo = repositorio.getById(id);
+		if (alvo != null) {
+			List<Documento> documentos = alvo.getDocumentos(); // pega todos os documentos e salva numa variável
+			for (Documento documento : documentos) { // vai percorrer pela variável inteira
+				if (documento.getId() == exclusao.getDocumentos().get(0).getId()) {
+					alvo.getDocumentos().remove(documento);
+					break;
+				}
+			}
+			repositorio.save(alvo); // atualiza no banco
 			status = HttpStatus.OK;
 		}
+
 		return new ResponseEntity<>(status);
 	}
 }
-
-
